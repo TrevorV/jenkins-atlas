@@ -44,8 +44,8 @@ public class ZxtmAdapterImpl implements ReverseProxyLoadBalancerAdapter {
 
     public static final VirtualServerRule ruleRateLimitHttp = new VirtualServerRule(RATE_LIMIT_HTTP, true, VirtualServerRuleRunFlag.run_every);
     public static final VirtualServerRule ruleRateLimitNonHttp = new VirtualServerRule(RATE_LIMIT_NON_HTTP, true, VirtualServerRuleRunFlag.run_every);
-    public static final VirtualServerRule ruleXForwardedPort = new VirtualServerRule(XFF, true, VirtualServerRuleRunFlag.run_every);
-    public static final VirtualServerRule ruleXForwardedFor = new VirtualServerRule(XFPORT, true, VirtualServerRuleRunFlag.run_every);
+    public static final VirtualServerRule ruleXForwardedPort = new VirtualServerRule(XFPORT, true, VirtualServerRuleRunFlag.run_every);
+    public static final VirtualServerRule ruleXForwardedFor = new VirtualServerRule(XFF, true, VirtualServerRuleRunFlag.run_every);
 
     public static final VirtualServerRule ruleXForwardedProto = new VirtualServerRule(XFP, true, VirtualServerRuleRunFlag.run_every);
     public static final VirtualServerRule ruleContentCaching = new VirtualServerRule(CONTENT_CACHING, true, VirtualServerRuleRunFlag.run_every);
@@ -574,7 +574,11 @@ public class ZxtmAdapterImpl implements ReverseProxyLoadBalancerAdapter {
 //                removeXFPRuleFromVirtualServers(serviceStubs, vsNames); // XFP is only for the HTTP protocol
                 serviceStubs.getVirtualServerBinding().setAddXForwardedForHeader(vsNames, disablesXF);
                 serviceStubs.getVirtualServerBinding().setAddXForwardedProtoHeader(vsNames, disablesXF);
-                removeXFPORTRuleFromVirtualServers(serviceStubs, vsNames); // XFP is only for the HTTP protocol
+//                removeXFPORTRuleFromVirtualServers(serviceStubs, vsNames); // XFP is only for the HTTP protocol
+                // :/ suppose well handle it like this because we dont know if theres multiple vs names or not...
+                for (String vname : vsNames) {
+                    serviceStubs.getVirtualServerBinding().setRules(new String[]{(vname)}, new VirtualServerRule[][]{{}});
+                }
                 updateContentCaching(config, lb);
                 if (!SessionPersistence.SOURCE_IP.equals(lb.getSessionPersistence())) {
                     removeSessionPersistence(config, lbId, accountId);
@@ -583,6 +587,9 @@ public class ZxtmAdapterImpl implements ReverseProxyLoadBalancerAdapter {
                 if (!SessionPersistence.HTTP_COOKIE.equals(lb.getSessionPersistence())) {
                     removeSessionPersistence(config, lbId, accountId);
                 }
+                serviceStubs.getVirtualServerBinding().setAddXForwardedForHeader(vsNames, enablesXF);
+                serviceStubs.getVirtualServerBinding().setAddXForwardedProtoHeader(vsNames, enablesXF);
+                attachXFPORTRuleToVirtualServers(serviceStubs, vsNames);
             }
         } catch (Exception e) {
             throw new ZxtmRollBackException(String.format("Update protocol request canceled for %s ", virtualServerName), e);
